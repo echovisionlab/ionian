@@ -33,6 +33,7 @@ try {
     'package/THIRD_PARTY_LICENSES/',
     'package/THIRD_PARTY_NOTICES.md',
     'package/dist/',
+    'package/dist/index.d.ts',
   ];
   for (const requiredEntry of requiredEntries) {
     if (!archiveEntries.some((entry) => entry === requiredEntry || entry.startsWith(requiredEntry))) {

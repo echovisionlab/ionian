@@ -24,11 +24,12 @@
     "dev": "vite --host --open",
     "build": "tsc6 --noEmit && vite build",
     "build:types": "dts-bundle-generator --config ./dts-bundle-generator.config.cjs",
+    "prepack": "pnpm run build && pnpm run build:types",
     "typecheck": "tsc6 --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "pack:smoke": "node scripts/package-smoke.mjs",
-    "validate": "pnpm test:coverage && pnpm run build && pnpm run build:types && pnpm run pack:smoke",
+    "validate": "pnpm test:coverage && pnpm run pack:smoke",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
