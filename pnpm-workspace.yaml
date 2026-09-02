@@ -1,0 +1,5 @@
+allowBuilds:
+  esbuild: true
+
+overrides:
+  'dts-bundle-generator>typescript': 'npm:@typescript/typescript6@6.0.2'

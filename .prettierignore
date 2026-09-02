@@ -1,0 +1,5 @@
+coverage/
+dist/
+LICENSE.md
+THIRD_PARTY_LICENSES/
+pnpm-lock.yaml

@@ -1,0 +1,14 @@
+# node
+/node_modules
+/dist
+/.tmp
+
+# jetbrains
+/.idea
+
+# coverage
+/coverage/
+/coverage.data
+
+# pnpm
+.env
