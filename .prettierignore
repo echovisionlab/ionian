@@ -3,3 +3,6 @@ dist/
 LICENSE.md
 THIRD_PARTY_LICENSES/
 pnpm-lock.yaml
+
+# Release Please owns generated changelog formatting.
+/CHANGELOG.md
