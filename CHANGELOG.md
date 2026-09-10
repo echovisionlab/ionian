@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/echovisionlab/ionian/compare/v0.1.1...v0.1.2) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ci:** preserve generated release manifest formatting ([#6](https://github.com/echovisionlab/ionian/issues/6)) ([cbab88b](https://github.com/echovisionlab/ionian/commit/cbab88b5077d4b3d5941e4f7ce29dbd03b60a1ea))
+
 ## [0.1.1](https://github.com/echovisionlab/ionian/compare/v0.1.0...v0.1.1) (2026-09-02)
 
 
