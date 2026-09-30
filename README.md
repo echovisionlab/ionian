@@ -83,6 +83,13 @@ same overall progress value that drives mesh morphing.
 - Pass `dracoDecoderPath` when the host app self-hosts Draco decoders.
 - Call `dispose()` when unmounting the scene.
 
+The engine owns registered meshes and textures and releases their GPU resources
+when they are replaced or when `dispose()` is called. Pending asset loads are
+discarded and cleaned up if teardown happens before they finish. When mesh
+sequence changes overlap at the same texture size, only the latest request can
+install its atlas; the previous atlas stays active until the replacement is
+ready.
+
 ## Development
 
 ```sh
