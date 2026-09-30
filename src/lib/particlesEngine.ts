@@ -1,7 +1,7 @@
 import { linear } from '@/lib/easing';
 import { DefaultEventEmitter } from '@/lib/events/defaultEventEmitter';
 import { AssetService, LoadMeshOptions } from '@/lib/services/assets/assetService';
-import { DataTextureService } from '@/lib/services/dataTexture/dataTextureService';
+import { DataTextureService, SequenceAtlasCancelledError } from '@/lib/services/dataTexture/dataTextureService';
 import { InstancedMeshManager } from '@/lib/services/instancedmesh/instancedMeshManager';
 import { IntersectionService } from '@/lib/services/intersection/intersectionService';
 import { SimulationRendererService } from '@/lib/services/simulation/simulationRendererService';
@@ -48,6 +48,10 @@ export class ParticlesEngine {
 
   private meshSequenceAtlasTexture: THREE.DataTexture | null = null;
   private lastRenderElapsedTimeSeconds: number | null = null;
+  private meshSequenceGeneration = 0;
+  private textureSizeGeneration = 0;
+  private pendingResizeProgress: number | null = null;
+  private disposed = false;
 
   public eventEmitter: DefaultEventEmitter;
 
@@ -108,12 +112,14 @@ export class ParticlesEngine {
   }
 
   async setTextureSize(size: number) {
-    if (this.engineState.textureSize === size) {
+    if (this.disposed || this.engineState.textureSize === size) {
       return;
     }
 
+    const resizeGeneration = ++this.textureSizeGeneration;
     const meshSequence = [...this.engineState.meshSequence];
-    const overallProgress = this.engineState.overallProgress;
+    const overallProgress = this.pendingResizeProgress ?? this.engineState.overallProgress;
+    this.pendingResizeProgress = overallProgress;
 
     this.engineState.textureSize = size;
 
@@ -127,15 +133,21 @@ export class ParticlesEngine {
       }
     }
 
+    let sequenceGeneration = this.meshSequenceGeneration;
     if (meshSequence.length > 0) {
-      await this.setMeshSequence(meshSequence);
+      const sequenceSetup = this.setMeshSequence(meshSequence);
+      sequenceGeneration = this.meshSequenceGeneration;
+      await sequenceSetup;
     }
+
+    if (this.disposed || resizeGeneration !== this.textureSizeGeneration) return;
 
     this.simulationRendererService.setVelocityTractionForce(this.engineState.velocityTractionForce);
     this.simulationRendererService.setPositionalTractionForce(this.engineState.positionalTractionForce);
     this.simulationRendererService.setMaxRepelDistance(this.engineState.maxRepelDistance);
     this.instancedMeshManager.setGeometrySize(this.engineState.instanceGeometryScale);
-    this.setOverallProgress(overallProgress, false);
+    if (this.meshSequenceGeneration === sequenceGeneration) this.setOverallProgress(overallProgress, false);
+    this.pendingResizeProgress = null;
   }
 
   registerMesh(id: string, mesh: THREE.Mesh) {
@@ -198,21 +210,29 @@ export class ParticlesEngine {
    * @param meshIDs An array of registered mesh IDs in the desired sequence order.
    */
   async setMeshSequence(meshIDs: string[]) {
+    if (this.disposed) return;
+    const generation = ++this.meshSequenceGeneration;
+    this.dataTextureManager.invalidatePendingSequence();
+
     if (!meshIDs || meshIDs.length < 1) {
       this.eventEmitter.emit('invalidRequest', { message: 'Mesh sequence must contain at least one mesh ID.' });
       this.engineState.meshSequence = []; // Clear sequence state
+      this.engineState.overallProgress = 0;
       this.intersectionService.setMeshSequence([]); // Clear intersection sequence
       return;
     }
-    this.engineState.meshSequence = meshIDs;
+    const requestedMeshIDs = [...meshIDs];
+    this.engineState.meshSequence = requestedMeshIDs;
     this.engineState.overallProgress = 0; // Reset progress when sequence changes
 
-    // Get valid mesh objects
-    const meshes = meshIDs.map((id) => this.assetService.getMesh(id)).filter((mesh) => mesh !== null) as THREE.Mesh[];
+    const resolvedMeshes = requestedMeshIDs.map((id) => ({ id, mesh: this.assetService.getMesh(id) }));
+    const validMeshes = resolvedMeshes.filter((entry): entry is { id: string; mesh: THREE.Mesh } => entry.mesh !== null);
+    const meshes = validMeshes.map((entry) => entry.mesh);
+    const validMeshIDs = validMeshes.map((entry) => entry.id);
 
     // Handle missing meshes
-    if (meshes.length !== meshIDs.length) {
-      const missing = meshIDs.filter((id) => !this.assetService.getMesh(id));
+    if (meshes.length !== requestedMeshIDs.length) {
+      const missing = resolvedMeshes.filter((entry) => entry.mesh === null).map((entry) => entry.id);
       console.warn(`Could not find meshes for IDs: ${missing.join(', ')}. Proceeding with ${meshes.length} found meshes.`);
       this.eventEmitter.emit('invalidRequest', { message: `Could not find meshes for IDs: ${missing.join(', ')}` });
       if (meshes.length < 1) {
@@ -221,32 +241,37 @@ export class ParticlesEngine {
         return; // Stop if no valid meshes
       }
       // Update sequence state to only include valid meshes found
-      this.engineState.meshSequence = meshes.map((m) => m.name);
+      this.engineState.meshSequence = validMeshIDs;
     }
+
+    const capturedMeshIDs = [...validMeshIDs];
+    const capturedMeshes = [...meshes];
+    const capturedTextureSize = this.engineState.textureSize;
 
     try {
       // Generate the atlas texture
-      this.meshSequenceAtlasTexture = await this.dataTextureManager.createSequenceDataTextureAtlas(meshes, this.engineState.textureSize);
+      const atlasTexture = await this.dataTextureManager.createSequenceDataTextureAtlas(capturedMeshes, capturedTextureSize);
+      if (this.disposed || generation !== this.meshSequenceGeneration) return;
+      this.meshSequenceAtlasTexture = atlasTexture;
 
       // Update the simulation renderer
       this.simulationRendererService.setPositionAtlas({
         dataTexture: this.meshSequenceAtlasTexture,
-        textureSize: this.engineState.textureSize, // Pass the size of the *output* GPGPU texture
-        numMeshes: this.engineState.meshSequence.length, // Use the potentially updated count
-        singleTextureSize: this.engineState.textureSize, // Size of one mesh's data within atlas
+        textureSize: capturedTextureSize, // Pass the size of the *output* GPGPU texture
+        numMeshes: capturedMeshIDs.length,
+        singleTextureSize: capturedTextureSize,
       });
       // Set initial progress in simulation (should be 0 after sequence change)
       this.simulationRendererService.setOverallProgress(this.engineState.overallProgress);
 
       // Update IntersectionService with the valid meshes
-      this.intersectionService.setMeshSequence(meshes);
+      this.intersectionService.setMeshSequence(capturedMeshes);
       this.intersectionService.setOverallProgress(this.engineState.overallProgress);
 
       this.setOverallProgress(0, false);
     } catch (error) {
+      if (this.disposed || generation !== this.meshSequenceGeneration || error instanceof SequenceAtlasCancelledError) return;
       console.error('Failed during mesh sequence setup:', error);
-      this.meshSequenceAtlasTexture = null;
-      // Consider resetting related states or services
     }
   }
 
@@ -347,6 +372,12 @@ export class ParticlesEngine {
    * Disposes the resources used by the engine.
    */
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.meshSequenceGeneration += 1;
+    this.textureSizeGeneration += 1;
+    this.pendingResizeProgress = null;
+
     // Check if scene exists before removing
     if (this.scene && this.instancedMeshManager) {
       this.scene.remove(this.instancedMeshManager.getMesh());
@@ -357,6 +388,7 @@ export class ParticlesEngine {
     this.intersectionService?.dispose();
     this.assetService?.dispose();
     this.dataTextureManager?.dispose();
+    this.meshSequenceAtlasTexture = null;
     this.eventEmitter?.dispose(); // Dispose event emitter too
   }
 

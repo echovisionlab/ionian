@@ -188,4 +188,211 @@ describe('AssetService', () => {
 
     service.dispose();
   });
+
+  it('disposes a texture that finishes loading after teardown without registering it', async () => {
+    const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
+    const texture = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
+    const dispose = vi.spyOn(texture, 'dispose');
+    const pending = deferred<THREE.Texture>();
+    const testable = service as unknown as { textureLoader: { loadAsync: (url: string) => Promise<THREE.Texture> } };
+    vi.spyOn(testable.textureLoader, 'loadAsync').mockReturnValue(pending.promise);
+
+    const load = service.loadTextureAsync('late', '/late.png');
+    service.dispose();
+    service.dispose();
+    pending.resolve(texture);
+
+    await expect(load).resolves.toBeNull();
+    expect(service.getTextureIDs()).toEqual([]);
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it('disposes every unique resource from a GLTF completed after teardown', async () => {
+    const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
+    const pending = deferred<{ scene: THREE.Group }>();
+    const testable = service as unknown as { gltfLoader: { loadAsync: (url: string) => Promise<{ scene: THREE.Group }> } };
+    vi.spyOn(testable.gltfLoader, 'loadAsync').mockReturnValue(pending.promise);
+
+    const sharedGeometry = new THREE.BoxGeometry();
+    const sharedTexture = new THREE.DataTexture(new Uint8Array([255, 0, 0, 255]), 1, 1, THREE.RGBAFormat);
+    const sharedMaterial = new THREE.MeshBasicMaterial({ map: sharedTexture });
+    const extraGeometry = new THREE.SphereGeometry();
+    const extraMaterial = new THREE.MeshBasicMaterial();
+    const geometryDispose = vi.spyOn(sharedGeometry, 'dispose');
+    const textureDispose = vi.spyOn(sharedTexture, 'dispose');
+    const materialDispose = vi.spyOn(sharedMaterial, 'dispose');
+    const extraGeometryDispose = vi.spyOn(extraGeometry, 'dispose');
+    const extraMaterialDispose = vi.spyOn(extraMaterial, 'dispose');
+    const scene = new THREE.Group();
+    scene.add(new THREE.Mesh(sharedGeometry, sharedMaterial));
+    scene.add(new THREE.Mesh(sharedGeometry, sharedMaterial));
+    scene.add(new THREE.Mesh(extraGeometry, extraMaterial));
+
+    const load = service.loadMeshAsync('late', '/late.glb');
+    service.dispose();
+    pending.resolve({ scene });
+
+    await expect(load).resolves.toBeNull();
+    expect(service.getMeshIDs()).toEqual([]);
+    expect(geometryDispose).toHaveBeenCalledOnce();
+    expect(textureDispose).toHaveBeenCalledOnce();
+    expect(materialDispose).toHaveBeenCalledOnce();
+    expect(extraGeometryDispose).toHaveBeenCalledOnce();
+    expect(extraMaterialDispose).toHaveBeenCalledOnce();
+  });
+
+  it('disposes discarded GLTF resources while preserving shared resources used by the selected mesh', async () => {
+    const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
+    const sharedGeometry = new THREE.BoxGeometry();
+    const sharedTexture = new THREE.DataTexture(new Uint8Array([0, 255, 0, 255]), 1, 1, THREE.RGBAFormat);
+    const sharedMaterial = new THREE.MeshBasicMaterial({ map: sharedTexture });
+    const selectedChildGeometry = new THREE.TorusGeometry();
+    const selectedChildMaterial = new THREE.MeshBasicMaterial();
+    const discardedGeometry = new THREE.SphereGeometry();
+    const discardedMaterial = new THREE.MeshBasicMaterial();
+    const otherSceneGeometry = new THREE.ConeGeometry();
+    const otherSceneMaterial = new THREE.MeshBasicMaterial();
+    const sharedGeometryDispose = vi.spyOn(sharedGeometry, 'dispose');
+    const sharedTextureDispose = vi.spyOn(sharedTexture, 'dispose');
+    const sharedMaterialDispose = vi.spyOn(sharedMaterial, 'dispose');
+    const selectedChildGeometryDispose = vi.spyOn(selectedChildGeometry, 'dispose');
+    const selectedChildMaterialDispose = vi.spyOn(selectedChildMaterial, 'dispose');
+    const discardedGeometryDispose = vi.spyOn(discardedGeometry, 'dispose');
+    const discardedMaterialDispose = vi.spyOn(discardedMaterial, 'dispose');
+    const otherSceneGeometryDispose = vi.spyOn(otherSceneGeometry, 'dispose');
+    const otherSceneMaterialDispose = vi.spyOn(otherSceneMaterial, 'dispose');
+    const scene = new THREE.Group();
+    const branch = new THREE.Group();
+    const selected = new THREE.Mesh(sharedGeometry, sharedMaterial);
+    selected.name = 'selected';
+    selected.add(new THREE.Mesh(selectedChildGeometry, selectedChildMaterial));
+    const sharedSibling = new THREE.Mesh(sharedGeometry, sharedMaterial);
+    const discardedSibling = new THREE.Mesh(discardedGeometry, discardedMaterial);
+    branch.add(selected);
+    branch.add(sharedSibling);
+    branch.add(discardedSibling);
+    scene.add(branch);
+    const secondScene = new THREE.Group();
+    secondScene.add(new THREE.Mesh(otherSceneGeometry, otherSceneMaterial));
+    const testable = service as unknown as { gltfLoader: { loadAsync: (url: string) => Promise<{ scene: THREE.Group; scenes: THREE.Group[] }> } };
+    vi.spyOn(testable.gltfLoader, 'loadAsync').mockResolvedValue({ scene, scenes: [scene, secondScene] });
+
+    await expect(service.loadMeshAsync('selected-id', '/model.glb', { meshName: 'selected' })).resolves.toBe(selected);
+
+    expect(branch.children).toEqual([selected, sharedSibling, discardedSibling]);
+    expect(selected.children).toHaveLength(1);
+    expect(sharedGeometryDispose).not.toHaveBeenCalled();
+    expect(sharedTextureDispose).not.toHaveBeenCalled();
+    expect(sharedMaterialDispose).not.toHaveBeenCalled();
+    expect(selectedChildGeometryDispose).not.toHaveBeenCalled();
+    expect(selectedChildMaterialDispose).not.toHaveBeenCalled();
+    expect(discardedGeometryDispose).toHaveBeenCalledOnce();
+    expect(discardedMaterialDispose).toHaveBeenCalledOnce();
+    expect(otherSceneGeometryDispose).toHaveBeenCalledOnce();
+    expect(otherSceneMaterialDispose).toHaveBeenCalledOnce();
+
+    service.dispose();
+    expect(sharedGeometryDispose).toHaveBeenCalledOnce();
+    expect(sharedTextureDispose).toHaveBeenCalledOnce();
+    expect(sharedMaterialDispose).toHaveBeenCalledOnce();
+    expect(selectedChildGeometryDispose).toHaveBeenCalledOnce();
+    expect(selectedChildMaterialDispose).toHaveBeenCalledOnce();
+  });
+
+  it('preserves a SkinnedMesh bone hierarchy in sibling scene nodes', async () => {
+    const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
+    const scene = new THREE.Group();
+    const armature = new THREE.Bone();
+    const joint = new THREE.Bone();
+    armature.name = 'armature';
+    joint.name = 'joint';
+    armature.add(joint);
+    const skinnedMesh = new THREE.SkinnedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    skinnedMesh.name = 'skin';
+    skinnedMesh.bind(new THREE.Skeleton([armature, joint]));
+    scene.add(armature);
+    scene.add(skinnedMesh);
+    const testable = service as unknown as { gltfLoader: { loadAsync: (url: string) => Promise<{ scene: THREE.Group }> } };
+    vi.spyOn(testable.gltfLoader, 'loadAsync').mockResolvedValue({ scene });
+
+    await expect(service.loadMeshAsync('skin-id', '/skin.glb')).resolves.toBe(skinnedMesh);
+
+    expect(scene.children).toEqual([armature, skinnedMesh]);
+    expect(armature.parent).toBe(scene);
+    expect(joint.parent).toBe(armature);
+    expect(skinnedMesh.skeleton.bones).toEqual([armature, joint]);
+
+    service.dispose();
+  });
+
+  it('does not dispose GLTF resources shared with an already registered mesh', async () => {
+    const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
+    const sharedGeometry = new THREE.BoxGeometry();
+    const sharedTexture = new THREE.DataTexture(new Uint8Array([12, 34, 56, 255]), 1, 1, THREE.RGBAFormat);
+    const sharedMaterial = new THREE.MeshBasicMaterial({ map: sharedTexture });
+    const sharedGeometryDispose = vi.spyOn(sharedGeometry, 'dispose');
+    const sharedTextureDispose = vi.spyOn(sharedTexture, 'dispose');
+    const sharedMaterialDispose = vi.spyOn(sharedMaterial, 'dispose');
+    const liveMesh = new THREE.Mesh(sharedGeometry, sharedMaterial);
+    const selected = new THREE.Mesh(new THREE.SphereGeometry(), new THREE.MeshBasicMaterial());
+    selected.name = 'selected';
+    const scene = new THREE.Group();
+    scene.add(new THREE.Mesh(sharedGeometry, sharedMaterial));
+    scene.add(selected);
+    service.register('live', liveMesh);
+    const testable = service as unknown as { gltfLoader: { loadAsync: (url: string) => Promise<{ scene: THREE.Group }> } };
+    vi.spyOn(testable.gltfLoader, 'loadAsync').mockResolvedValue({ scene });
+
+    await expect(service.loadMeshAsync('selected', '/shared.glb', { meshName: 'selected' })).resolves.toBe(selected);
+
+    expect(sharedGeometryDispose).not.toHaveBeenCalled();
+    expect(sharedTextureDispose).not.toHaveBeenCalled();
+    expect(sharedMaterialDispose).not.toHaveBeenCalled();
+
+    service.dispose();
+    expect(sharedGeometryDispose).toHaveBeenCalledOnce();
+    expect(sharedTextureDispose).toHaveBeenCalledOnce();
+    expect(sharedMaterialDispose).toHaveBeenCalledOnce();
+  });
+
+  it('preserves live asset resources while discarding a GLTF with no matching mesh', async () => {
+    const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
+    const sharedTexture = new THREE.DataTexture(new Uint8Array([12, 34, 56, 255]), 1, 1, THREE.RGBAFormat);
+    const liveTextureDispose = vi.spyOn(sharedTexture, 'dispose');
+    service.register('live-texture', sharedTexture);
+    const scene = new THREE.Group();
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial({ map: sharedTexture })));
+    const testable = service as unknown as { gltfLoader: { loadAsync: (url: string) => Promise<{ scene: THREE.Group }> } };
+    vi.spyOn(testable.gltfLoader, 'loadAsync').mockResolvedValue({ scene });
+
+    await expect(service.loadMeshAsync('missing', '/shared-texture.glb', { meshName: 'missing' })).resolves.toBeNull();
+
+    expect(liveTextureDispose).not.toHaveBeenCalled();
+    expect(service.getTextureIDs()).toEqual(['live-texture']);
+    service.dispose();
+    expect(liveTextureDispose).toHaveBeenCalledOnce();
+  });
+
+  it('does not acquire synchronous assets after disposal', () => {
+    const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
+    service.dispose();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const geometryDispose = vi.spyOn(mesh.geometry, 'dispose');
+
+    service.register('late', mesh);
+
+    expect(service.getMeshIDs()).toEqual([]);
+    expect(geometryDispose).toHaveBeenCalledOnce();
+    expect(() => service.getSolidColorTexture('#ffffff')).toThrow('AssetService has been disposed.');
+  });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
