@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/echovisionlab/ionian/compare/v0.1.2...v0.1.3) (2026-09-30)
+
+
+### Bug Fixes
+
+* **lifecycle:** prevent late asset and atlas resurrection ([#8](https://github.com/echovisionlab/ionian/issues/8)) ([abd369e](https://github.com/echovisionlab/ionian/commit/abd369e8f6b898535a1f83a91945464f390853ac))
+
 ## [0.1.2](https://github.com/echovisionlab/ionian/compare/v0.1.1...v0.1.2) (2026-09-08)
 
 
