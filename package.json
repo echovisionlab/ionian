@@ -53,9 +53,9 @@
   },
   "homepage": "https://github.com/echovisionlab/ionian#readme",
   "engines": {
-    "node": "24.19.0"
+    "node": "24.21.0"
   },
-  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+  "packageManager": "pnpm@12.9.1+sha512.06b055fff5cd20dc12781de173ced3310ce0951bf2ec620211a16045d5444d5c93a663210764ef29a653a610459ba0368f0e74f84d80c54723cf95aae7bc0d6d",
   "peerDependencies": {
     "mitt": "^3.0.1",
     "three": ">=0.175.0 <0.187.0",
@@ -63,19 +63,19 @@
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
-    "@types/node": "^26.1.2",
+    "@types/node": "^24.19.1",
     "@types/stats.js": "^0.17.4",
     "@types/three": "^0.186.0",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^5.0.3",
     "dts-bundle-generator": "^9.5.1",
     "lil-gui": "^0.21.0",
     "stats.js": "^0.17.0",
-    "terser": "^5.49.2",
+    "terser": "^5.51.2",
     "three": "^0.186.1",
     "three-stdlib": "^2.36.1",
-    "prettier": "^3.5.1",
+    "prettier": "^3.9.9",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vite": "^8.2.1",
-    "vitest": "^4.1.10"
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }
