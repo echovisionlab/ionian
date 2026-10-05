@@ -89,8 +89,8 @@ jobs:
       - name: Install exact dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate package
-        run: pnpm run validate
+      - name: Verify packed release package
+        run: pnpm run pack:smoke
 
       - name: Verify registry signatures for production dependencies
         run: pnpm audit signatures -P
