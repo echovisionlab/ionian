@@ -58,7 +58,7 @@
   "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
   "peerDependencies": {
     "mitt": "^3.0.1",
-    "three": ">=0.175.0 <0.186.0",
+    "three": ">=0.175.0 <0.187.0",
     "three-stdlib": ">=2.35.15 <3.0.0"
   },
   "devDependencies": {
@@ -71,6 +71,8 @@
     "lil-gui": "^0.21.0",
     "stats.js": "^0.17.0",
     "terser": "^5.49.2",
+    "three": "^0.186.1",
+    "three-stdlib": "^2.36.1",
     "prettier": "^3.5.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite": "^8.2.1",
