@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/echovisionlab/ionian/compare/v0.1.3...v0.1.4) (2026-10-05)
+
+
+### Bug Fixes
+
+* **deps:** support Three r186 and refresh tooling ([bab705d](https://github.com/echovisionlab/ionian/commit/bab705d8f873174c3afe57277da8ebad69b2ac5c))
+* **deps:** support Three r186 and refresh tooling ([454eb26](https://github.com/echovisionlab/ionian/commit/454eb263d26b034ede9e3336324a5fc6fe86d079))
+
 ## [0.1.3](https://github.com/echovisionlab/ionian/compare/v0.1.2...v0.1.3) (2026-09-30)
 
 
