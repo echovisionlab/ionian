@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/echovisionlab/ionian/compare/v0.1.4...v0.1.5) (2026-10-05)
+
+
+### Bug Fixes
+
+* make engine diagnostics opt in ([e6a5b84](https://github.com/echovisionlab/ionian/commit/e6a5b84905d92768ab7f446146dc1b90727c05cd))
+* make engine diagnostics opt in ([092ce0b](https://github.com/echovisionlab/ionian/commit/092ce0b5b0530b4c7e8ca55c5f47a7abaeeae2d2))
+
 ## [0.1.4](https://github.com/echovisionlab/ionian/compare/v0.1.3...v0.1.4) (2026-10-05)
 
 
