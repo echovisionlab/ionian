@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/echovisionlab/ionian/compare/v0.1.5...v0.1.6) (2026-10-05)
+
+
+### Bug Fixes
+
+* **deps:** refresh supported package toolchain ([#16](https://github.com/echovisionlab/ionian/issues/16)) ([1fe3635](https://github.com/echovisionlab/ionian/commit/1fe3635afccb07081f53a102aeaeab534b671aa3))
+
 ## [0.1.5](https://github.com/echovisionlab/ionian/compare/v0.1.4...v0.1.5) (2026-10-05)
 
 
