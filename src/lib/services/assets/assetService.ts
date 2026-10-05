@@ -7,6 +7,7 @@ const DEFAULT_DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/versioned/deco
 
 export interface AssetServiceOptions {
   dracoDecoderPath?: string | null;
+  debug?: boolean;
 }
 
 export interface LoadMeshOptions {
@@ -19,6 +20,7 @@ export class AssetService {
   private readonly disposedResources = new WeakSet<object>();
 
   private readonly eventEmitter;
+  private readonly debug: boolean;
   private readonly meshes = new Map<string, THREE.Mesh>();
   private readonly textures = new Map<string, THREE.Texture>();
 
@@ -31,6 +33,7 @@ export class AssetService {
 
   constructor(eventEmitter: DefaultEventEmitter, options: AssetServiceOptions = {}) {
     this.eventEmitter = eventEmitter;
+    this.debug = options.debug ?? false;
     const decoderPath = options.dracoDecoderPath === undefined ? DEFAULT_DRACO_DECODER_PATH : options.dracoDecoderPath;
     if (decoderPath !== null) {
       this.dracoLoader = new DRACOLoader();
@@ -98,7 +101,7 @@ export class AssetService {
       this.solidColorTextures.set(colorKey, texture);
       return texture;
     } catch (error) {
-      console.error(`Invalid color value provided to getSolidColorTexture: ${colorValue}`, error);
+      if (this.debug) console.error(`Invalid color value provided to getSolidColorTexture: ${colorValue}`, error);
       this.eventEmitter.emit('invalidRequest', { message: `Invalid color value: ${colorValue}. Using fallback texture.` });
       return this.fallbackTexture;
     }

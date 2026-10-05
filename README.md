@@ -15,7 +15,7 @@ pnpm add @echovisionlab/ionian three three-stdlib mitt
 
 `three`, `three-stdlib`, and `mitt` are peer dependencies.
 
-Ionian is currently validated against `three@0.184.0` and
+Ionian is currently validated against `three@0.186.1` and
 `three-stdlib@2.36.1` in package smoke tests. The peer range starts at the
 `three@0.175.0` compatibility baseline and intentionally stops before the next
 untested Three.js minor.
@@ -55,6 +55,13 @@ it scroll progress, an automatic timeline, or a static value from the host app.
 Use `renderFrame(deltaSeconds, elapsedSeconds)` when the host runtime already
 provides frame timing, such as React Three Fiber. Use `render(elapsedTimeMs)`
 for `requestAnimationFrame` timestamps.
+
+Diagnostic console output is off by default. Pass `debug: true` when creating an
+engine to enable Ionian diagnostics for that instance. Existing invalid request
+events, fallbacks, and thrown errors are preserved. Mesh sequence setup failures
+also emit `invalidRequest` so hosts can handle them while console output is off.
+The host application controls its Three.js renderer diagnostics; Ionian does not
+change the supplied renderer.
 
 ## Texture Sequence
 

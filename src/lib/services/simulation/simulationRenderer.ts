@@ -43,7 +43,12 @@ export class SimulationRenderer {
    * @param webGLRenderer The WebGL renderer.
    * @param initialPosition The initial position data texture (optional, defaults to sphere).
    */
-  constructor(size: number, webGLRenderer: THREE.WebGLRenderer, initialPosition?: THREE.DataTexture) {
+  constructor(
+    size: number,
+    webGLRenderer: THREE.WebGLRenderer,
+    initialPosition?: THREE.DataTexture,
+    private readonly debug = false,
+  ) {
     this.webGLRenderer = webGLRenderer;
     this.gpuComputationRenderer = new GPUComputationRenderer(size, size, this.webGLRenderer);
 
@@ -119,7 +124,7 @@ export class SimulationRenderer {
   setPositionAtlas(entry: PositionAtlasEntry) {
     // Validate texture dimensions (optional but good practice)
     const expectedAtlasWidth = entry.singleTextureSize * entry.numMeshes;
-    if (entry.dataTexture.image.width !== expectedAtlasWidth || entry.dataTexture.image.height !== entry.singleTextureSize) {
+    if (this.debug && (entry.dataTexture.image.width !== expectedAtlasWidth || entry.dataTexture.image.height !== entry.singleTextureSize)) {
       console.error(
         `SimulationRenderer: Atlas texture dimension mismatch! Expected ${expectedAtlasWidth}x${entry.singleTextureSize}, Got ${entry.dataTexture.image.width}x${entry.dataTexture.image.height}`,
       );

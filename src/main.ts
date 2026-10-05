@@ -8,6 +8,8 @@ import Stats from 'stats.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 
+const debug = import.meta.env.DEV;
+
 type CMSEntry = { id: number; name: string; file: string };
 
 // --- Fetching Functions (Keep as is) ---
@@ -19,7 +21,7 @@ const fetchResourceUrls = async (key: string): Promise<CMSEntry[]> => {
     const obj = await response.json();
     return obj.data as CMSEntry[];
   } catch (error) {
-    console.error(`Error fetching resource URLs for ${key}:`, error);
+    if (debug) console.error(`Error fetching resource URLs for ${key}:`, error);
     return [];
   }
 };
@@ -29,6 +31,7 @@ const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.debug.checkShaderErrors = debug;
 renderer.setSize(canvas.width, canvas.height);
 renderer.setPixelRatio(window.devicePixelRatio);
 const camera = new THREE.PerspectiveCamera(75, canvas.width / canvas.height, 0.01, 100);
@@ -46,6 +49,7 @@ const engine = new ParticlesEngine({
   scene,
   renderer,
   camera,
+  debug,
   useIntersection: false, // Initial state for intersection
 });
 
@@ -94,7 +98,7 @@ sequenceFolder
   .add(
     {
       trigger: () => {
-        console.log(`Scheduling overall transition to ${meshParams.targetProgress} over ${meshParams.transitionDuration}ms`);
+        if (debug) console.log(`Scheduling overall transition to ${meshParams.targetProgress} over ${meshParams.transitionDuration}ms`);
 
         engine.scheduleMeshSequenceTransition(
           meshParams.targetProgress,
@@ -107,8 +111,8 @@ sequenceFolder
                 overallProgressController.updateDisplay();
               }
             },
-            onTransitionFinished: () => console.log('Overall transition finished.'),
-            onTransitionCancelled: () => console.log('Overall transition cancelled.'),
+            onTransitionFinished: () => debug && console.log('Overall transition finished.'),
+            onTransitionCancelled: () => debug && console.log('Overall transition cancelled.'),
           },
           true,
         );
@@ -145,12 +149,12 @@ instanceFolder
   .add(instanceParams, 'textureSize', textureSizes)
   .name('Texture Size')
   .onChange((value: number) => {
-    console.log(`Requesting texture size change to: ${value}`);
+    if (debug) console.log(`Requesting texture size change to: ${value}`);
     instanceFolder.title('Instance Settings (Resizing...)');
     engine
       .setTextureSize(value)
       .then(() => {
-        console.log(`Texture size successfully set to ${value}.`);
+        if (debug) console.log(`Texture size successfully set to ${value}.`);
         instanceFolder.title('Instance Settings');
         instanceParams.textureSize = engine.getTextureSize();
         if (overallProgressController) {
@@ -159,7 +163,7 @@ instanceFolder
         }
       })
       .catch((error) => {
-        console.error(`Failed to set texture size to ${value}:`, error);
+        if (debug) console.error(`Failed to set texture size to ${value}:`, error);
         instanceParams.textureSize = engine.getTextureSize();
         instanceFolder.title('Instance Settings (Error)');
       });
@@ -175,13 +179,13 @@ instanceFolder
 // Load Meshes and Set Initial Sequence
 fetchResourceUrls('meshes').then((entries) => {
   if (!entries || entries.length === 0) {
-    console.warn('No mesh entries found.');
+    if (debug) console.warn('No mesh entries found.');
     return;
   }
-  console.log(`Found ${entries.length} mesh entries. Loading...`);
+  if (debug) console.log(`Found ${entries.length} mesh entries. Loading...`);
   const promises = entries.map((entry) =>
     engine.fetchAndRegisterMesh(entry.name, `/api/assets/${entry.file}`).catch((error) => {
-      console.error(`Failed to load mesh ${entry.name}:`, error);
+      if (debug) console.error(`Failed to load mesh ${entry.name}:`, error);
       return null;
     }),
   );
@@ -190,13 +194,13 @@ fetchResourceUrls('meshes').then((entries) => {
     const loadedMeshes = results.filter((mesh) => mesh !== null) as THREE.Mesh[];
     const meshNames = loadedMeshes.map((mesh) => mesh.name);
     if (meshNames.length > 0) {
-      console.log(`Loaded ${meshNames.length} meshes. Setting sequence:`, meshNames);
+      if (debug) console.log(`Loaded ${meshNames.length} meshes. Setting sequence:`, meshNames);
       engine
         .setMeshSequence(meshNames) // Set the initial mesh sequence
-        .then(() => console.log('Initial mesh sequence set.'))
-        .catch((error) => console.error('Error setting initial mesh sequence:', error));
+        .then(() => debug && console.log('Initial mesh sequence set.'))
+        .catch((error) => debug && console.error('Error setting initial mesh sequence:', error));
     } else {
-      console.error('Failed to load any meshes.');
+      if (debug) console.error('Failed to load any meshes.');
     }
   });
 });
@@ -204,13 +208,13 @@ fetchResourceUrls('meshes').then((entries) => {
 // Load Matcaps and Update Texture Sequence
 fetchResourceUrls('matcaps').then((entries) => {
   if (!entries || entries.length === 0) {
-    console.warn('No matcap entries found. Using initial texture sequence.');
+    if (debug) console.warn('No matcap entries found. Using initial texture sequence.');
     return;
   }
-  console.log(`Found ${entries.length} matcap entries. Loading...`);
+  if (debug) console.log(`Found ${entries.length} matcap entries. Loading...`);
   const promises = entries.map((entry) =>
     engine.fetchAndRegisterMatcap(entry.name, `/api/assets/${entry.file}`).catch((error) => {
-      console.error(`Failed to load matcap ${entry.name}:`, error);
+      if (debug) console.error(`Failed to load matcap ${entry.name}:`, error);
       return null;
     }),
   );
@@ -219,7 +223,7 @@ fetchResourceUrls('matcaps').then((entries) => {
     const loadedMatcaps = results.filter((tex) => tex !== null) as THREE.Texture[];
     matcapIds = loadedMatcaps.map((tex) => tex.name); // Store loaded IDs
 
-    console.log(`Loaded ${matcapIds.length} matcaps.`);
+    if (debug) console.log(`Loaded ${matcapIds.length} matcaps.`);
 
     // --- Update texture sequence after the load ---
     if (matcapIds.length > 0) {
@@ -231,10 +235,10 @@ fetchResourceUrls('matcaps').then((entries) => {
         dynamicTextureSequence.push({ type: 'color', value: '#0000ff' });
       }
 
-      console.log('Setting dynamic texture sequence:', dynamicTextureSequence);
+      if (debug) console.log('Setting dynamic texture sequence:', dynamicTextureSequence);
       engine.setTextureSequence(dynamicTextureSequence);
     } else {
-      console.warn('No matcaps loaded, keeping initial texture sequence.');
+      if (debug) console.warn('No matcaps loaded, keeping initial texture sequence.');
     }
   });
 });
@@ -262,7 +266,7 @@ document.body.appendChild(stats.dom);
 window.addEventListener('mousemove', mouseEventHandler);
 window.addEventListener('resize', resizeHandler);
 window.addEventListener('beforeunload', () => {
-  console.log('Disposing resources...');
+  if (debug) console.log('Disposing resources...');
   gui.destroy();
   stats.dom.remove();
   engine.dispose();
