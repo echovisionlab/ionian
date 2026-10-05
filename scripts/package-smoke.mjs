@@ -80,7 +80,7 @@ try {
       '@types/three@0.186.0',
       'three-stdlib@2.36.1',
       'mitt@3.0.1',
-      'typescript@5.8.3',
+      'typescript@7.0.2',
     ],
     {
       cwd: consumerDir,
