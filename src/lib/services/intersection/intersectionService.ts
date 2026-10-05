@@ -29,7 +29,11 @@ export class IntersectionService {
    * @param eventEmitter The event emitter used for emitting events.
    * @param camera The camera used for raycasting.
    */
-  constructor(eventEmitter: DefaultEventEmitter, camera?: THREE.Camera) {
+  constructor(
+    eventEmitter: DefaultEventEmitter,
+    camera?: THREE.Camera,
+    private readonly debug = false,
+  ) {
     this.camera = camera;
     this.eventEmitter = eventEmitter;
     this.geometryNeedsUpdate = true;
@@ -81,7 +85,7 @@ export class IntersectionService {
         this.meshSequenceGeometries.push(clonedGeometry);
         this.meshSequenceUUIDs.push(mesh.uuid); // Store UUID for reference
       } else {
-        console.warn('Invalid mesh provided to IntersectionService sequence.');
+        if (this.debug) console.warn('Invalid mesh provided to IntersectionService sequence.');
         // Add a placeholder or handle error? For now, just skip.
       }
     });
@@ -263,7 +267,7 @@ export class IntersectionService {
     const geomB = this.meshSequenceGeometries[indexB];
 
     if (!geomA || !geomB) {
-      console.error('IntersectionService: Invalid geometries found for blending at indices', indexA, indexB);
+      if (this.debug) console.error('IntersectionService: Invalid geometries found for blending at indices', indexA, indexB);
       return this.meshSequenceGeometries[0]; // Fallback
     }
 

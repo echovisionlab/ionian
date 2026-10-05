@@ -1,10 +1,11 @@
 import { DefaultEventEmitter } from '@/lib/events/defaultEventEmitter';
 import { EngineState } from '@/lib/types/state';
 import * as THREE from 'three';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ParticlesEngine } from './particlesEngine';
 
 describe('ParticlesEngine mesh sequence lifecycle', () => {
+  afterEach(() => vi.restoreAllMocks());
   it('applies only the latest atlas with its captured mesh count and texture size', async () => {
     const firstMesh = mesh('first-id');
     const secondMesh = mesh('second-id');
@@ -50,10 +51,12 @@ describe('ParticlesEngine mesh sequence lifecycle', () => {
     expect(harness.invalidatePendingSequence).toHaveBeenCalledTimes(2);
   });
 
-  it('captures the valid IDs and count when some requested meshes are missing', async () => {
+  it.each([false, true])('preserves partial mesh fallback with debug=%s', async (debug) => {
     const available = mesh('registered-name');
-    const harness = createHarness({ validId: available });
+    const harness = createHarness({ validId: available }, debug);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const invalidRequest = vi.fn();
+    harness.engine.eventEmitter.on('invalidRequest', invalidRequest);
 
     const setup = harness.engine.setMeshSequence(['validId', 'missingId']);
     const atlas = texture('partial');
@@ -68,12 +71,29 @@ describe('ParticlesEngine mesh sequence lifecycle', () => {
       singleTextureSize: 1,
     });
     expect(harness.setIntersectionSequence).toHaveBeenCalledWith([available]);
-    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledTimes(debug ? 1 : 0);
+    expect(invalidRequest).toHaveBeenCalledWith({ message: 'Could not find meshes for IDs: missingId' });
+  });
+
+  it.each([false, true])('preserves sequence setup failure behavior with debug=%s', async (debug) => {
+    const harness = createHarness({ available: mesh('available') }, debug);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const invalidRequest = vi.fn();
+    harness.engine.eventEmitter.on('invalidRequest', invalidRequest);
+    const failure = new Error('sample failed');
+    const setup = harness.engine.setMeshSequence(['available']);
+    harness.builds[0].reject(failure);
+    await expect(setup).resolves.toBeUndefined();
+    expect(error).toHaveBeenCalledTimes(debug ? 1 : 0);
+    expect(invalidRequest).toHaveBeenCalledWith({ message: 'Failed during mesh sequence setup: Error: sample failed' });
+    expect(harness.setPositionAtlas).not.toHaveBeenCalled();
   });
 
   it('ignores a stale failure without changing the latest requested sequence', async () => {
     const harness = createHarness({ old: mesh('old'), latest: mesh('latest') });
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const invalidRequest = vi.fn();
+    harness.engine.eventEmitter.on('invalidRequest', invalidRequest);
     const staleSetup = harness.engine.setMeshSequence(['old']);
     const latestSetup = harness.engine.setMeshSequence(['latest']);
 
@@ -83,6 +103,7 @@ describe('ParticlesEngine mesh sequence lifecycle', () => {
     await latestSetup;
 
     expect(consoleError).not.toHaveBeenCalled();
+    expect(invalidRequest).not.toHaveBeenCalled();
     expect(harness.internals.engineState.meshSequence).toEqual(['latest']);
     expect(harness.setPositionAtlas).toHaveBeenCalledOnce();
   });
@@ -129,7 +150,7 @@ describe('ParticlesEngine mesh sequence lifecycle', () => {
   });
 });
 
-function createHarness(meshes: Record<string, THREE.Mesh>) {
+function createHarness(meshes: Record<string, THREE.Mesh>, debug = false) {
   const engine = Object.create(ParticlesEngine.prototype) as ParticlesEngine;
   const builds: ReturnType<typeof deferred<THREE.DataTexture>>[] = [];
   const setPositionAtlas = vi.fn();
@@ -190,6 +211,7 @@ function createHarness(meshes: Record<string, THREE.Mesh>) {
     transitionService: { dispose: () => void };
   };
   Object.assign(internals, {
+    debug,
     assetService: {
       getMesh: (id: string) => meshes[id] ?? null,
       dispose: assetDispose,

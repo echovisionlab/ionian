@@ -89,6 +89,23 @@ describe('AssetService', () => {
     service.dispose();
   });
 
+  it.each([undefined, true])('preserves color fallback and invalidRequest with debug=%s', (debug) => {
+    const emitter = new DefaultEventEmitter();
+    const invalidRequest = vi.fn();
+    emitter.on('invalidRequest', invalidRequest);
+    const service = new AssetService(emitter, { dracoDecoderPath: null, debug });
+    const testable = service as unknown as { createSolidColorDataTexture: (color: THREE.Color) => THREE.Texture };
+    vi.spyOn(testable, 'createSolidColorDataTexture').mockImplementation(() => {
+      throw new Error('texture allocation failed');
+    });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect(service.getSolidColorTexture('#336699')).toBe(service.getFallbackTexture());
+    expect(invalidRequest).toHaveBeenCalledWith({ message: 'Invalid color value: #336699. Using fallback texture.' });
+    expect(error).toHaveBeenCalledTimes(debug ? 1 : 0);
+    service.dispose();
+  });
+
   it('loads the first nested mesh from a GLTF scene', async () => {
     const service = new AssetService(new DefaultEventEmitter(), { dracoDecoderPath: null });
     const group = new THREE.Group();

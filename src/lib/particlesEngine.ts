@@ -22,6 +22,8 @@ export type ParticlesEngineParameters = {
   camera?: THREE.Camera;
   useIntersection?: boolean;
   dracoDecoderPath?: string | null;
+  /** Enable diagnostic console output for this instance. Defaults to false. */
+  debug?: boolean;
 };
 
 type ServiceStates = Record<ServiceType, ServiceState>;
@@ -32,6 +34,7 @@ type ServiceStates = Record<ServiceType, ServiceState>;
 export class ParticlesEngine {
   private simulationRendererService: SimulationRendererService;
   private renderer: THREE.WebGLRenderer;
+  private readonly debug: boolean;
 
   private scene: THREE.Scene;
   private serviceStates: ServiceStates;
@@ -60,7 +63,8 @@ export class ParticlesEngine {
    * @param params The parameters for creating the instance.
    */
   constructor(params: ParticlesEngineParameters) {
-    const { scene, renderer, camera, textureSize, useIntersection = true } = params;
+    const { scene, renderer, camera, textureSize, useIntersection = true, debug = false } = params;
+    this.debug = debug;
 
     this.eventEmitter = new DefaultEventEmitter();
     this.serviceStates = this.getInitialServiceStates();
@@ -70,14 +74,14 @@ export class ParticlesEngine {
     this.renderer = renderer;
     this.engineState = this.initialEngineState(params);
 
-    this.assetService = new AssetService(this.eventEmitter, { dracoDecoderPath: params.dracoDecoderPath });
+    this.assetService = new AssetService(this.eventEmitter, { dracoDecoderPath: params.dracoDecoderPath, debug });
     this.transitionService = new TransitionService(this.eventEmitter);
     this.dataTextureManager = new DataTextureService(this.eventEmitter, textureSize);
-    this.simulationRendererService = new SimulationRendererService(this.eventEmitter, textureSize, this.renderer);
+    this.simulationRendererService = new SimulationRendererService(this.eventEmitter, textureSize, this.renderer, debug);
     this.instancedMeshManager = new InstancedMeshManager(textureSize);
     this.scene.add(this.instancedMeshManager.getMesh());
 
-    this.intersectionService = new IntersectionService(this.eventEmitter, camera);
+    this.intersectionService = new IntersectionService(this.eventEmitter, camera, debug);
     if (!useIntersection) this.intersectionService.setActive(false);
     this.setOverallProgress(0, false);
 
@@ -233,7 +237,7 @@ export class ParticlesEngine {
     // Handle missing meshes
     if (meshes.length !== requestedMeshIDs.length) {
       const missing = resolvedMeshes.filter((entry) => entry.mesh === null).map((entry) => entry.id);
-      console.warn(`Could not find meshes for IDs: ${missing.join(', ')}. Proceeding with ${meshes.length} found meshes.`);
+      if (this.debug) console.warn(`Could not find meshes for IDs: ${missing.join(', ')}. Proceeding with ${meshes.length} found meshes.`);
       this.eventEmitter.emit('invalidRequest', { message: `Could not find meshes for IDs: ${missing.join(', ')}` });
       if (meshes.length < 1) {
         this.engineState.meshSequence = []; // Clear sequence state if none found
@@ -271,7 +275,8 @@ export class ParticlesEngine {
       this.setOverallProgress(0, false);
     } catch (error) {
       if (this.disposed || generation !== this.meshSequenceGeneration || error instanceof SequenceAtlasCancelledError) return;
-      console.error('Failed during mesh sequence setup:', error);
+      if (this.debug) console.error('Failed during mesh sequence setup:', error);
+      this.eventEmitter.emit('invalidRequest', { message: `Failed during mesh sequence setup: ${error}` });
     }
   }
 

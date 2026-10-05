@@ -19,7 +19,12 @@ export class SimulationRendererService {
   private lastKnownVelocityDataTexture: THREE.Texture;
   private lastKnownPositionDataTexture: THREE.Texture;
 
-  constructor(eventEmitter: DefaultEventEmitter, size: number, webGLRenderer: THREE.WebGLRenderer) {
+  constructor(
+    eventEmitter: DefaultEventEmitter,
+    size: number,
+    webGLRenderer: THREE.WebGLRenderer,
+    private readonly debug = false,
+  ) {
     this.eventEmitter = eventEmitter;
     this.webGLRenderer = webGLRenderer;
     this.textureSize = size;
@@ -29,7 +34,7 @@ export class SimulationRendererService {
 
     this.updateServiceState('initializing');
 
-    this.simulationRenderer = new SimulationRenderer(this.textureSize, this.webGLRenderer);
+    this.simulationRenderer = new SimulationRenderer(this.textureSize, this.webGLRenderer, undefined, this.debug);
     this.lastKnownVelocityDataTexture = this.simulationRenderer.getVelocityTexture();
     this.lastKnownPositionDataTexture = this.simulationRenderer.getPositionTexture();
 
@@ -64,7 +69,7 @@ export class SimulationRendererService {
     this.updateServiceState('initializing');
     this.simulationRenderer.dispose();
     this.textureSize = size;
-    this.simulationRenderer = new SimulationRenderer(size, this.webGLRenderer);
+    this.simulationRenderer = new SimulationRenderer(size, this.webGLRenderer, undefined, this.debug);
     this.updateServiceState('ready');
   }
 
