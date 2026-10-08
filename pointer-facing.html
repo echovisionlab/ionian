@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+    <title>Ionian · 마우스 방향 미리보기</title>
+    <style>
+      body {
+        background: #1a1b1e;
+        color: #ddd;
+        font-family: system-ui, sans-serif;
+      }
+      .caption {
+        position: fixed;
+        left: 24px;
+        top: 20px;
+        pointer-events: none;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+      p {
+        font-size: 13px;
+        color: #aaa;
+        margin: 6px 0;
+      }
+      .status {
+        position: fixed;
+        left: 24px;
+        bottom: 20px;
+        font-size: 12px;
+        color: #aaa;
+      }
+      @media (max-width: 640px) {
+        .caption {
+          top: auto;
+          bottom: 70px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" aria-label="마우스를 따라보면서 독립적으로 회전하는 Ionian 파티클"></canvas>
+    <div class="caption">
+      <h1>Ionian · 마우스 방향</h1>
+      <p>자동 회전 + 마우스 따라보기</p>
+      <p>커서를 움직이고 오른쪽에서 축별 강도·속도·각도를 조절해보세요.</p>
+    </div>
+    <p id="status" class="status">파티클 준비 중…</p>
+    <script type="module" src="/src/pointer-facing-demo.ts"></script>
+  </body>
+</html>
