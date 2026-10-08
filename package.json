@@ -1,6 +1,6 @@
 {
   "name": "@echovisionlab/ionian",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "ThreeJS Collection Set",
   "main": "dist/ionian.js",
   "types": "dist/index.d.ts",

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/echovisionlab/ionian/compare/v0.1.6...v0.2.0) (2026-10-08)
+
+
+### Features
+
+* add independent per-axis pointer facing ([#19](https://github.com/echovisionlab/ionian/issues/19)) ([19607db](https://github.com/echovisionlab/ionian/commit/19607dbd006252dba71c9bd71875abd33108c46c))
+
 ## [0.1.6](https://github.com/echovisionlab/ionian/compare/v0.1.5...v0.1.6) (2026-10-05)
 
 
