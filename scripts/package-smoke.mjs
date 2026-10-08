@@ -96,6 +96,11 @@ import { ParticlesEngine, resolveSequenceInterpolation } from '@echovisionlab/io
 if (typeof ParticlesEngine !== 'function') {
   throw new Error('ParticlesEngine export is not a constructor');
 }
+for (const method of ['setPointerFacing', 'setPointerFacingPosition', 'getPointerFacingOptions']) {
+  if (typeof ParticlesEngine.prototype[method] !== 'function') {
+    throw new Error('ParticlesEngine is missing ' + method);
+  }
+}
 
 const interpolation = resolveSequenceInterpolation(0.5, 3);
 if (interpolation.indexA !== 1 || interpolation.indexB !== 2 || interpolation.localProgress !== 0) {
@@ -108,7 +113,22 @@ if (interpolation.indexA !== 1 || interpolation.indexB !== 2 || interpolation.lo
   fs.writeFileSync(
     path.join(consumerDir, 'index.ts'),
     `
-import { resolveSequenceInterpolation, type ParticlesEngineParameters, type TextureSequence } from '@echovisionlab/ionian';
+import { ParticlesEngine, resolveSequenceInterpolation, type ParticlesEngineParameters, type PointerFacingOptions, type PointerFacingPosition, type TextureSequence } from '@echovisionlab/ionian';
+
+const facing = {
+  enabled: true,
+  strength: { x: 0.5, y: 1, z: 0.2 },
+  response: { x: 5, y: 8, z: 3 },
+  maxAngle: { x: 0.4, y: 0.5, z: 0.1 },
+} satisfies PointerFacingOptions;
+const pointer = { x: 0.6, y: 0.2, z: -0.4 } satisfies PointerFacingPosition;
+function configure(engine: ParticlesEngine) {
+  engine.setPointerFacing(facing);
+  engine.setPointerFacing({ strength: 0.5, response: 8 });
+  engine.setPointerFacingPosition(pointer);
+  engine.setPointerFacingPosition(null);
+  engine.getPointerFacingOptions()?.enabled.valueOf();
+}
 
 const sequence: TextureSequence = [
   { type: 'color', value: '#ffffff' },
@@ -120,6 +140,7 @@ const params = {
   scene: undefined as never,
   renderer: undefined as never,
   dracoDecoderPath: '/draco/',
+  pointerFacing: facing,
 } satisfies ParticlesEngineParameters;
 
 resolveSequenceInterpolation(0.5, sequence.length);

@@ -63,6 +63,45 @@ also emit `invalidRequest` so hosts can handle them while console output is off.
 The host application controls its Three.js renderer diagnostics; Ionian does not
 change the supplied renderer.
 
+## Pointer Facing
+
+Pointer-facing tilts the complete particle object toward normalized viewport
+coordinates. It is opt-in and independent of particle repulsion and the host's
+authored rotation. An outer transform supplies the tilt; `engine.getObject()`
+continues to expose the inner mesh, so automatic rotation can run at the same time.
+
+```ts
+engine.setPointerFacing({
+  enabled: true,
+  strength: { x: 0.75, y: 1, z: 0.2 }, // 0..1, independently per rotation axis
+  response: { x: 5, y: 8, z: 3 }, // response rate per second; higher follows faster
+  maxAngle: { x: Math.PI / 6, y: Math.PI / 6, z: Math.PI / 18 }, // radians
+});
+engine.setPointerFacingPosition({ x: 0.6, y: 0.2 }); // normalized -1..1
+engine.getObject().rotation.z += deltaSeconds * 0.2; // separate authored rotation
+engine.renderFrame(deltaSeconds, elapsedSeconds);
+engine.setPointerFacingPosition(null); // pointer leave: smoothly return to neutral
+```
+
+The same settings can be passed as `pointerFacing` to the constructor. Defaults
+are disabled, strength 1, response 8, 20° pitch/yaw limits, and zero roll.
+`strength` and `response` accept either one number for all axes or an `{ x, y, z }`
+object. Strength and limits determine the target angle; response controls smoothing
+independently on each rotation axis. Smoothing uses
+frame time, so it behaves consistently across refresh rates. With a supplied
+camera, tilt follows the camera's screen axes. `setPointerPosition()` retains its
+existing particle-repulsion behavior and does not enable pointer-facing.
+
+Input y controls pitch (rotation x), input x controls yaw (rotation y). Roll
+(rotation z) uses input x by default, or an explicit normalized input z:
+`engine.setPointerFacingPosition({ x: 0.6, y: 0.2, z: -0.4 })`. Set an axis's
+strength or angle limit to zero to turn off its influence. Coordinates are
+clamped to -1..1.
+
+Run the Vite development server and open `/pointer-facing.html` for a local,
+CMS-independent preview with separate rotation and pointer-facing controls,
+including torus-knot, 404 and 500 sampling meshes.
+
 ## Texture Sequence
 
 Texture sequences support registered matcaps and solid colors:

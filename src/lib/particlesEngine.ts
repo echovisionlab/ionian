@@ -1,5 +1,6 @@
 import { linear } from '@/lib/easing';
 import { DefaultEventEmitter } from '@/lib/events/defaultEventEmitter';
+import { PointerFacing, PointerFacingOptions, PointerFacingPosition } from '@/lib/pointerFacing';
 import { AssetService, LoadMeshOptions } from '@/lib/services/assets/assetService';
 import { DataTextureService, SequenceAtlasCancelledError } from '@/lib/services/dataTexture/dataTextureService';
 import { InstancedMeshManager } from '@/lib/services/instancedmesh/instancedMeshManager';
@@ -24,6 +25,8 @@ export type ParticlesEngineParameters = {
   dracoDecoderPath?: string | null;
   /** Enable diagnostic console output for this instance. Defaults to false. */
   debug?: boolean;
+  /** Optional outer pointer tilt, independent of the mesh's authored rotation. */
+  pointerFacing?: Partial<PointerFacingOptions>;
 };
 
 type ServiceStates = Record<ServiceType, ServiceState>;
@@ -55,6 +58,7 @@ export class ParticlesEngine {
   private textureSizeGeneration = 0;
   private pendingResizeProgress: number | null = null;
   private disposed = false;
+  private pointerFacing?: PointerFacing;
 
   public eventEmitter: DefaultEventEmitter;
 
@@ -80,6 +84,8 @@ export class ParticlesEngine {
     this.simulationRendererService = new SimulationRendererService(this.eventEmitter, textureSize, this.renderer, debug);
     this.instancedMeshManager = new InstancedMeshManager(textureSize);
     this.scene.add(this.instancedMeshManager.getMesh());
+    this.pointerFacing = new PointerFacing(this.instancedMeshManager.getMesh(), camera);
+    if (params.pointerFacing) this.pointerFacing.setOptions(params.pointerFacing);
 
     this.intersectionService = new IntersectionService(this.eventEmitter, camera, debug);
     if (!useIntersection) this.intersectionService.setActive(false);
@@ -101,6 +107,7 @@ export class ParticlesEngine {
   }
 
   renderFrame(deltaTimeSeconds: number, elapsedTimeSeconds: number) {
+    this.pointerFacing?.update(deltaTimeSeconds);
     this.transitionService.compute(elapsedTimeSeconds);
     this.intersectionService.calculate(this.instancedMeshManager.getMesh());
     this.simulationRendererService.compute(deltaTimeSeconds);
@@ -131,6 +138,7 @@ export class ParticlesEngine {
     this.simulationRendererService.setTextureSize(size);
     const { current, previous } = this.instancedMeshManager.resize(size);
     if (current !== previous) {
+      this.pointerFacing?.replaceObject(current);
       previous.dispose();
       if (!current.parent) {
         this.scene.add(current);
@@ -186,6 +194,20 @@ export class ParticlesEngine {
     if (!this.engineState.useIntersect) return;
     this.engineState.pointerPosition = position;
     this.intersectionService.setPointerPosition(position);
+  }
+
+  /** Configure pointer-facing independently of particle repulsion and mesh rotation. */
+  setPointerFacing(options: Partial<PointerFacingOptions>) {
+    if (!this.disposed) this.pointerFacing?.setOptions(options);
+  }
+
+  /** Supply normalized viewport coordinates, or null on pointer leave. */
+  setPointerFacingPosition(position: PointerFacingPosition | null) {
+    if (!this.disposed) this.pointerFacing?.setPointer(position);
+  }
+
+  getPointerFacingOptions(): Readonly<PointerFacingOptions> | undefined {
+    return this.pointerFacing?.getOptions();
   }
 
   setGeometrySize(geometrySize: THREE.Vector3Like) {
@@ -383,6 +405,7 @@ export class ParticlesEngine {
     this.textureSizeGeneration += 1;
     this.pendingResizeProgress = null;
 
+    this.pointerFacing?.dispose();
     // Check if scene exists before removing
     if (this.scene && this.instancedMeshManager) {
       this.scene.remove(this.instancedMeshManager.getMesh());
