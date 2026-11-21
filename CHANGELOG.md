@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/echovisionlab/ionian/compare/v0.2.0...v0.2.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* remove the bundled emitter peer and patch Vite ([#23](https://github.com/echovisionlab/ionian/issues/23)) ([2a926f2](https://github.com/echovisionlab/ionian/commit/2a926f2c3bf1b85e2c54afe339845e47f40c1275))
+
 ## [0.2.0](https://github.com/echovisionlab/ionian/compare/v0.1.6...v0.2.0) (2026-10-08)
 
 
