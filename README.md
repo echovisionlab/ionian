@@ -10,10 +10,10 @@ asset upload flow, scroll/loop behavior, and UI.
 ## Install
 
 ```sh
-pnpm add @echovisionlab/ionian three three-stdlib mitt
+pnpm add @echovisionlab/ionian three three-stdlib
 ```
 
-`three`, `three-stdlib`, and `mitt` are peer dependencies.
+Ionian uses the application’s copies of `three` and `three-stdlib`.
 
 Ionian is currently validated against `three@0.186.1` and
 `three-stdlib@2.36.1` in package smoke tests. The peer range starts at the

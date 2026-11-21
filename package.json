@@ -53,11 +53,10 @@
   },
   "homepage": "https://github.com/echovisionlab/ionian#readme",
   "engines": {
-    "node": "24.21.0"
+    "node": "^24.21.0"
   },
   "packageManager": "pnpm@12.9.1+sha512.06b055fff5cd20dc12781de173ced3310ce0951bf2ec620211a16045d5444d5c93a663210764ef29a653a610459ba0368f0e74f84d80c54723cf95aae7bc0d6d",
   "peerDependencies": {
-    "mitt": "^3.0.1",
     "three": ">=0.175.0 <0.187.0",
     "three-stdlib": ">=2.35.15 <3.0.0"
   },
@@ -69,13 +68,14 @@
     "@vitest/coverage-v8": "^5.0.3",
     "dts-bundle-generator": "^9.5.1",
     "lil-gui": "^0.21.0",
+    "mitt": "3.0.1",
     "stats.js": "^0.17.0",
     "terser": "^5.51.2",
     "three": "^0.186.1",
     "three-stdlib": "^2.36.1",
     "prettier": "^3.9.9",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vite": "^8.3.2",
+    "vite": "^8.3.8",
     "vitest": "^5.0.3"
   }
 }
