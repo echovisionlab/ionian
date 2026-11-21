@@ -53,6 +53,10 @@ try {
     throw new Error(`unexpected package license: ${packedPackage.license}`);
   }
 
+  if (Object.hasOwn(packedPackage.peerDependencies ?? {}, 'mitt')) {
+    throw new Error('The bundled event emitter must not require a consumer peer');
+  }
+
   fs.mkdirSync(consumerDir);
   fs.writeFileSync(
     path.join(consumerDir, 'package.json'),
@@ -79,7 +83,6 @@ try {
       'three@0.186.1',
       '@types/three@0.186.0',
       'three-stdlib@2.36.1',
-      'mitt@3.0.1',
       'typescript@7.0.2',
     ],
     {
