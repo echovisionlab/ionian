@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/echovisionlab/ionian/compare/v0.2.1...v0.2.2) (2026-11-22)
+
+
+### Bug Fixes
+
+* **deps:** resolve source-map-js to 1.2.4 ([#26](https://github.com/echovisionlab/ionian/issues/26)) ([64a531f](https://github.com/echovisionlab/ionian/commit/64a531f19113e6786997d9fc0877d7da19f9892a))
+
 ## [0.2.1](https://github.com/echovisionlab/ionian/compare/v0.2.0...v0.2.1) (2026-11-21)
 
 
